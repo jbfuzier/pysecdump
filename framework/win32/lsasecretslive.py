@@ -29,6 +29,11 @@ from wpc.regkey import regkey
 from binascii import hexlify
 xp = None
 
+def isXp():
+    r = regkey("HKEY_LOCAL_MACHINE\\SECURITY\\Policy\\PolSecretEncryptionKey")
+    if r.is_present():
+        return True
+    return False
 
 def get_lsa_key(bootkey):
     global xp
@@ -90,17 +95,18 @@ def decrypt_lsa(ciphertext, bootkey):
 	for i in range(1000):
 		sha256.update(ciphertext[28:60])
 	aeskey = sha256.digest()
+#	print "aeskey :%s"%hexlify(aeskey)
 
 	aes = AES.new(aeskey, AES.MODE_ECB)
 	cleartext = aes.decrypt(ciphertext[60:len(ciphertext)])
-
+#	print "Decrypted AES : %s"%(hexlify(cleartext))
 	return cleartext
 
 def decrypt_lsa2(ciphertext, bootkey):
 	ciphertext2 = decrypt_lsa(ciphertext, bootkey)
-
-	(length,) = unpack("<L", ciphertext2[:4])
-	return ciphertext2[16:16+length]
+	return ciphertext2
+#	(length,) = unpack("<L", ciphertext2[:4])
+#	return ciphertext2[16:16+length]
 
 def get_secret_by_name(name, lsakey):
     global xp
@@ -109,8 +115,9 @@ def get_secret_by_name(name, lsakey):
         return None
 
     enc_secret = r.get_value("")
-
+#    print "Encoded secret %s"%hexlify(enc_secret)
     if xp:
+#      print "xp"
       return decrypt_secret(enc_secret[0xC:], lsakey)
     else:
       return decrypt_lsa2(enc_secret, lsakey)

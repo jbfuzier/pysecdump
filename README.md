@@ -1,6 +1,26 @@
 pysecdump
 =========
 
+Overview
+========
+Just some modification to the original pysecdump to make it work on Win7 (original was not working for me)
+
+
+Credits
+=======
+
+PentestMonkey for the original pysecdump : https://github.com/pentestmonkey/pysecdump
+Also : 
+    http://lab.mediaservice.net/code/cachedump.rb
+    https://code.google.com/p/volatility/issues/attachmentText?id=92&aid=9054978084954926075&name=cache_dump.diff&token=0I58CQuQiaBtCo3QnUOGI2twPyo%3A1371041094228
+    were quite useful
+
+
+Original README :
+
+pysecdump
+=========
+
 Python-based tool to dump security information from Windows systems
 
 Overview
